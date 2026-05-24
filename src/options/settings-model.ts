@@ -18,6 +18,7 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
     private _canAccessKeeWebTab: boolean | undefined;
     private _keeWebUrl: string | undefined;
     private _passkeysEnabled = false;
+    private _passkeysFallback = true;
     private _useNativeApp: boolean | undefined;
     private _backgroundPagePort: chrome.runtime.Port | undefined;
     private _chromeCommands: chrome.commands.Command[] | undefined;
@@ -34,12 +35,16 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
 
     private loadStorageConfig(): Promise<void> {
         return new Promise((resolve) => {
-            chrome.storage.local.get(['useNativeApp', 'keeWebUrl', 'passkeysEnabled'], (result) => {
-                this._useNativeApp = <boolean>(result.useNativeApp ?? true);
-                this._keeWebUrl = <string>result.keeWebUrl;
-                this._passkeysEnabled = Boolean(result.passkeysEnabled);
-                resolve();
-            });
+            chrome.storage.local.get(
+                ['useNativeApp', 'keeWebUrl', 'passkeysEnabled', 'passkeysFallback'],
+                (result) => {
+                    this._useNativeApp = <boolean>(result.useNativeApp ?? true);
+                    this._keeWebUrl = <string>result.keeWebUrl;
+                    this._passkeysEnabled = Boolean(result.passkeysEnabled);
+                    this._passkeysFallback = <boolean>(result.passkeysFallback ?? true);
+                    resolve();
+                }
+            );
         });
     }
 
@@ -127,6 +132,15 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
     setPasskeysEnabled(passkeysEnabled: boolean) {
         this._passkeysEnabled = passkeysEnabled;
         chrome.storage.local.set({ passkeysEnabled }, () => this.emit('change'));
+    }
+
+    get passkeysFallback(): boolean {
+        return this._passkeysFallback;
+    }
+
+    setPasskeysFallback(passkeysFallback: boolean) {
+        this._passkeysFallback = passkeysFallback;
+        chrome.storage.local.set({ passkeysFallback }, () => this.emit('change'));
     }
 
     get keeWebUrl(): string {

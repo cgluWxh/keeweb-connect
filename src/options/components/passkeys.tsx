@@ -6,6 +6,9 @@ const Passkeys: FunctionComponent = () => {
     const setPasskeysEnabled = (event: Event) => {
         model.setPasskeysEnabled((event.currentTarget as HTMLInputElement).checked);
     };
+    const setPasskeysFallback = (event: Event) => {
+        model.setPasskeysFallback((event.currentTarget as HTMLInputElement).checked);
+    };
 
     return (
         <>
@@ -18,6 +21,16 @@ const Passkeys: FunctionComponent = () => {
                         onChange={setPasskeysEnabled}
                     />{' '}
                     {res('optionsPasskeysEnable')}
+                </label>
+            </p>
+            <p>
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={model.passkeysFallback}
+                        onChange={setPasskeysFallback}
+                    />{' '}
+                    {res('optionsPasskeysFallback')}
                 </label>
             </p>
         </>

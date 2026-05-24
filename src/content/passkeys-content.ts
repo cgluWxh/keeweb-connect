@@ -10,11 +10,14 @@ interface PasskeysBackgroundResponse {
 
 const RequestEvent = 'kw-passkeys-request';
 const ResponseEvent = 'kw-passkeys-response';
+const CancelEvent = 'kw-passkeys-cancel';
 
 let passkeysEnabled = false;
+let passkeysFallback = true;
 
-chrome.storage.local.get(['passkeysEnabled'], (result) => {
+chrome.storage.local.get(['passkeysEnabled', 'passkeysFallback'], (result) => {
     passkeysEnabled = Boolean(result.passkeysEnabled);
+    passkeysFallback = <boolean>(result.passkeysFallback ?? true);
     if (passkeysEnabled) {
         injectPageScript();
     }
@@ -26,6 +29,9 @@ chrome.storage.onChanged.addListener((changes) => {
         if (passkeysEnabled) {
             injectPageScript();
         }
+    }
+    if (changes.passkeysFallback) {
+        passkeysFallback = <boolean>(changes.passkeysFallback.newValue ?? true);
     }
 });
 
@@ -40,6 +46,7 @@ document.addEventListener(RequestEvent, (event) => {
                 detail: {
                     errorCode: '31',
                     errorMessage: 'Passkeys are disabled',
+                    fallback: passkeysFallback,
                     requestId: detail.requestId
                 }
             })
@@ -63,12 +70,24 @@ document.addEventListener(RequestEvent, (event) => {
                             errorCode: '31',
                             errorMessage: lastError?.message
                         }),
+                        fallback: passkeysFallback,
                         requestId: detail.requestId
                     }
                 })
             );
         }
     );
+});
+
+document.addEventListener(CancelEvent, (event) => {
+    const detail = (event as CustomEvent<{ requestId?: string }>).detail;
+    if (!detail?.requestId) {
+        return;
+    }
+    void chrome.runtime.sendMessage({
+        action: 'passkeys-cancel',
+        requestId: detail.requestId
+    });
 });
 
 function injectPageScript() {

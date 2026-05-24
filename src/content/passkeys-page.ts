@@ -6,6 +6,7 @@ declare global {
 
 const RequestEvent = 'kw-passkeys-request';
 const ResponseEvent = 'kw-passkeys-response';
+const CancelEvent = 'kw-passkeys-cancel';
 
 interface PasskeysRequest {
     action: 'passkeys-get' | 'passkeys-register';
@@ -35,6 +36,7 @@ interface PasskeysCredentialResponse {
     authenticatorAttachment?: string;
     errorCode?: string;
     errorMessage?: string;
+    fallback?: boolean;
     response?: PasskeysAssertionResponse;
 }
 
@@ -68,13 +70,13 @@ function installPasskeysProxy() {
                     action: 'passkeys-register',
                     publicKey,
                     requestId: createRequestId(),
-                    timeout: getRequestTimeout(publicKey.timeout, true),
-                    abortable: false
+                    timeout: getRequestTimeout(publicKey.timeout),
+                    abortable: true
                 },
                 signal
             );
 
-            if (!response) {
+            if (!response || (response.errorCode && response.fallback)) {
                 return originalCredentials.create(options);
             }
             if (response.errorCode) {
@@ -107,13 +109,13 @@ function installPasskeysProxy() {
                     action: 'passkeys-get',
                     publicKey,
                     requestId: createRequestId(),
-                    timeout: getRequestTimeout(publicKey.timeout, false),
+                    timeout: getRequestTimeout(publicKey.timeout),
                     abortable: true
                 },
                 signal
             );
 
-            if (!response) {
+            if (!response || (response.errorCode && response.fallback)) {
                 return originalCredentials.get(options);
             }
             if (response.errorCode) {
@@ -168,6 +170,9 @@ function postPasskeysRequest(
             resolve(response);
         };
         const abortListener = () => {
+            document.dispatchEvent(
+                new CustomEvent(CancelEvent, { detail: { requestId: request.requestId } })
+            );
             finish({ errorCode: '22', errorMessage: 'Abort signalled' });
         };
         const listener = (event: Event) => {
@@ -310,11 +315,7 @@ function getTimeout(userVerification?: string, timeout?: number) {
     return Number(timeout);
 }
 
-function getRequestTimeout(timeout: number | undefined, isRegistration: boolean) {
-    const registrationTimeout = 300000;
-    if (isRegistration) {
-        return Math.max(Number(timeout) || 0, registrationTimeout);
-    }
+function getRequestTimeout(timeout: number | undefined) {
     return timeout || 30000;
 }
 
@@ -348,6 +349,9 @@ function throwPasskeysError(errorCode: string, errorMessage?: string): never {
     }
     if (errorCode === '32') {
         throw new TypeError(message);
+    }
+    if (errorCode === '20') {
+        throw new DOMException(message, 'NotSupportedError');
     }
     throw new DOMException(message, 'NotAllowedError');
 }

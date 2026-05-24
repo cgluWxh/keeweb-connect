@@ -54,6 +54,7 @@
   "optionsUsageMenu": { "message": "Alternatively, select a desired option from the KeeWeb menu:" },
   "optionsPasskeys": { "message": "Passkeys" },
   "optionsPasskeysEnable": { "message": "Enable passkeys" },
+  "optionsPasskeysFallback": { "message": "Allow fallback to browser passkeys" },
   "optionsShortcuts": { "message": "Keyboard shortcuts" },
   "optionsShortcutsDescription": { "message": "You can change shortcuts in the extension shortcuts settings." },
   "optionsShortcutsDescriptionNoChange": { "message": "You can use these shortcuts to submit forms faster." },
