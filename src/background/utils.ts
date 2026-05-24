@@ -1,8 +1,41 @@
 export function activateTab(tabId: number): Promise<boolean> {
     return new Promise((resolve) => {
         chrome.tabs.update(tabId, { active: true }, () => {
-            const success = !chrome.runtime.lastError;
-            resolve(success);
+            if (chrome.runtime.lastError) {
+                resolve(false);
+                return;
+            }
+
+            chrome.tabs.get(tabId, (tab) => {
+                if (chrome.runtime.lastError || !tab.windowId) {
+                    resolve(false);
+                    return;
+                }
+
+                focusWindow(tab.windowId).then(resolve, () => resolve(false));
+            });
+        });
+    });
+}
+
+function focusWindow(windowId: number): Promise<boolean> {
+    return new Promise((resolve) => {
+        chrome.windows.get(windowId, (win) => {
+            if (chrome.runtime.lastError || !win) {
+                resolve(false);
+                return;
+            }
+
+            chrome.windows.update(
+                windowId,
+                {
+                    focused: true,
+                    ...(win.state === 'minimized' ? { state: 'normal' as const } : undefined)
+                },
+                () => {
+                    resolve(!chrome.runtime.lastError);
+                }
+            );
         });
     });
 }

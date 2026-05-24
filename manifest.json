@@ -40,7 +40,7 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "default-src 'self'"
+    "extension_pages": "default-src 'self'; connect-src https:"
   },
   "options_ui": {
     "page": "pages/options.html",

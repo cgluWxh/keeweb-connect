@@ -51,16 +51,18 @@ async function runCommand(args: CommandArgs): Promise<void> {
         other: args.command.includes('other')
     };
 
-    await backend.connect();
-    if (backend.state !== BackendConnectionState.Connected) {
-        void chrome.runtime.openOptionsPage();
-        return;
-    }
-
-    let text: string | undefined;
-    let password: string | undefined;
+    let shouldFill = false;
 
     try {
+        await backend.connect();
+        if (backend.state !== BackendConnectionState.Connected) {
+            void chrome.runtime.openOptionsPage();
+            return;
+        }
+
+        let text: string | undefined;
+        let password: string | undefined;
+
         if (options.username || options.password) {
             const [entry] = await backend.getLogins(args.url);
 
@@ -78,17 +80,22 @@ async function runCommand(args: CommandArgs): Promise<void> {
         } else {
             text = await backend.getAnyField(args.url, args.tab.title || '');
         }
-    } finally {
+
+        shouldFill = true;
         if (args.tab.id) {
             await activateTab(args.tab.id);
         }
-    }
 
-    await autoFill(args.url, args.tab, args.frameId, {
-        text,
-        password,
-        submit: options.submit
-    });
+        await autoFill(args.url, args.tab, args.frameId, {
+            text,
+            password,
+            submit: options.submit
+        });
+    } finally {
+        if (!shouldFill && args.tab.id) {
+            await activateTab(args.tab.id);
+        }
+    }
 }
 
 function isValidUrl(url: string): boolean {
