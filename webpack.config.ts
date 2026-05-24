@@ -19,6 +19,8 @@ export default {
         'background': './src/background/init.ts',
         'content-keeweb': './src/content/content-keeweb.ts',
         'content-page': './src/content/content-page.ts',
+        'passkeys-content': './src/content/passkeys-content.ts',
+        'passkeys-page': './src/content/passkeys-page.ts',
         'options': './src/options/index.tsx'
     },
     output: {

@@ -17,6 +17,7 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
     private _loaded = false;
     private _canAccessKeeWebTab: boolean | undefined;
     private _keeWebUrl: string | undefined;
+    private _passkeysEnabled = false;
     private _useNativeApp: boolean | undefined;
     private _backgroundPagePort: chrome.runtime.Port | undefined;
     private _chromeCommands: chrome.commands.Command[] | undefined;
@@ -33,9 +34,10 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
 
     private loadStorageConfig(): Promise<void> {
         return new Promise((resolve) => {
-            chrome.storage.local.get(['useNativeApp', 'keeWebUrl'], (result) => {
+            chrome.storage.local.get(['useNativeApp', 'keeWebUrl', 'passkeysEnabled'], (result) => {
                 this._useNativeApp = <boolean>(result.useNativeApp ?? true);
                 this._keeWebUrl = <string>result.keeWebUrl;
+                this._passkeysEnabled = Boolean(result.passkeysEnabled);
                 resolve();
             });
         });
@@ -116,6 +118,15 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
 
     get useWebApp(): boolean {
         return !this._useNativeApp;
+    }
+
+    get passkeysEnabled(): boolean {
+        return this._passkeysEnabled;
+    }
+
+    setPasskeysEnabled(passkeysEnabled: boolean) {
+        this._passkeysEnabled = passkeysEnabled;
+        chrome.storage.local.set({ passkeysEnabled }, () => this.emit('change'));
     }
 
     get keeWebUrl(): string {

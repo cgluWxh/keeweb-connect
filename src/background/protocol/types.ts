@@ -142,3 +142,78 @@ export interface KeeWebConnectGetAnyFieldResponsePayload extends KeeWebConnectRe
     field: string;
     value: string;
 }
+
+// passkeys
+
+export interface KeeWebConnectPasskeyCredentialDescriptor {
+    id: string;
+    transports?: string[];
+    type: 'public-key';
+}
+
+export interface KeeWebConnectPasskeysGetPublicKey {
+    allowCredentials?: KeeWebConnectPasskeyCredentialDescriptor[];
+    challenge: string;
+    extensions?: unknown;
+    relatedOrigins?: string[];
+    rpId?: string;
+    timeout?: number;
+    userVerification?: string;
+}
+
+export interface KeeWebConnectPasskeysRegisterPublicKey {
+    attestation?: string;
+    authenticatorSelection?: {
+        residentKey?: string;
+        requireResidentKey?: boolean;
+        userVerification?: string;
+    };
+    challenge: string;
+    excludeCredentials?: KeeWebConnectPasskeyCredentialDescriptor[];
+    extensions?: unknown;
+    pubKeyCredParams?: Array<{ type: 'public-key'; alg: number }>;
+    relatedOrigins?: string[];
+    rp: { id: string; name?: string };
+    timeout?: number;
+    user: { displayName: string; id: string; name: string };
+}
+
+export interface KeeWebConnectPasskeysGetRequestPayload extends KeeWebConnectRequest {
+    action: 'passkeys-get';
+    publicKey: KeeWebConnectPasskeysGetPublicKey;
+    origin: string;
+}
+
+export interface KeeWebConnectPasskeysRegisterRequestPayload extends KeeWebConnectRequest {
+    action: 'passkeys-register';
+    publicKey: KeeWebConnectPasskeysRegisterPublicKey;
+    origin: string;
+}
+
+export interface KeeWebConnectPasskeysGetResponseData {
+    id?: string;
+    rawId?: string;
+    type?: 'public-key';
+    authenticatorAttachment?: string;
+    response?: {
+        authenticatorData?: string;
+        attestationObject?: string;
+        clientDataJSON?: string;
+        publicKey?: string;
+        publicKeyAlgorithm?: number;
+        signature?: string;
+        transports?: string[];
+        userHandle?: string;
+        errorCode?: string;
+    };
+    errorCode?: string;
+    errorMessage?: string;
+}
+
+export interface KeeWebConnectPasskeysGetResponsePayload extends KeeWebConnectResponse {
+    response: KeeWebConnectPasskeysGetResponseData;
+}
+
+export interface KeeWebConnectPasskeysRegisterResponsePayload extends KeeWebConnectResponse {
+    response: KeeWebConnectPasskeysGetResponseData;
+}

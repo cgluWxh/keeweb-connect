@@ -20,7 +20,14 @@ import {
     KeeWebConnectGetTotpByUrlRequestPayload,
     KeeWebConnectGetTotpByUrlResponsePayload,
     KeeWebConnectGetAnyFieldRequestPayload,
-    KeeWebConnectGetAnyFieldResponsePayload
+    KeeWebConnectGetAnyFieldResponsePayload,
+    KeeWebConnectPasskeysGetPublicKey,
+    KeeWebConnectPasskeysGetRequestPayload,
+    KeeWebConnectPasskeysGetResponseData,
+    KeeWebConnectPasskeysGetResponsePayload,
+    KeeWebConnectPasskeysRegisterPublicKey,
+    KeeWebConnectPasskeysRegisterRequestPayload,
+    KeeWebConnectPasskeysRegisterResponsePayload
 } from './types';
 import { fromBase64, randomBase64, randomBytes, toBase64 } from 'background/utils';
 import { box as tweetnaclBox, BoxKeyPair } from 'tweetnacl';
@@ -319,6 +326,46 @@ class ProtocolImpl {
         );
 
         return payload.value;
+    }
+
+    async passkeysGet(
+        publicKey: KeeWebConnectPasskeysGetPublicKey,
+        origin: string
+    ): Promise<KeeWebConnectPasskeysGetResponseData> {
+        const requestPayload: KeeWebConnectPasskeysGetRequestPayload = {
+            action: 'passkeys-get',
+            publicKey,
+            origin
+        };
+        const request = this.makeEncryptedRequest(requestPayload);
+
+        const response = <KeeWebConnectEncryptedResponse>await this.request(request);
+
+        const payload = <KeeWebConnectPasskeysGetResponsePayload>(
+            this.decryptResponsePayload(request, response)
+        );
+
+        return payload.response;
+    }
+
+    async passkeysRegister(
+        publicKey: KeeWebConnectPasskeysRegisterPublicKey,
+        origin: string
+    ): Promise<KeeWebConnectPasskeysGetResponseData> {
+        const requestPayload: KeeWebConnectPasskeysRegisterRequestPayload = {
+            action: 'passkeys-register',
+            publicKey,
+            origin
+        };
+        const request = this.makeEncryptedRequest(requestPayload);
+
+        const response = <KeeWebConnectEncryptedResponse>await this.request(request);
+
+        const payload = <KeeWebConnectPasskeysRegisterResponsePayload>(
+            this.decryptResponsePayload(request, response)
+        );
+
+        return payload.response;
     }
 }
 

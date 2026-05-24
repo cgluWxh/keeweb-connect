@@ -2,6 +2,7 @@ import { backend } from './backend';
 import { createUIMenus, bindExtensionButtonClick } from './ui';
 import { startInternalIpc } from './internal-ipc';
 import { startCommandListener } from './commands';
+import { startPasskeysListener } from './passkeys';
 import { noop } from 'common/utils';
 
 let startPromise: Promise<void>;
@@ -32,6 +33,7 @@ function startAndReportError(): Promise<void> {
 
 async function start() {
     startCommandListener();
+    startPasskeysListener();
     createUIMenus();
     bindExtensionButtonClick();
     startInternalIpc();

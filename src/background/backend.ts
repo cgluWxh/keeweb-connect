@@ -5,6 +5,9 @@ import { TransportNativeMessaging } from './transport/transport-native-messaging
 import { TransportBrowserTab } from './transport/transport-browser-tab';
 import {
     KeeWebConnectGetLoginsResponseEntry,
+    KeeWebConnectPasskeysGetPublicKey,
+    KeeWebConnectPasskeysGetResponseData,
+    KeeWebConnectPasskeysRegisterPublicKey,
     KeeWebConnectRequest,
     KeeWebConnectResponse
 } from './protocol/types';
@@ -26,6 +29,7 @@ interface BackendEvents {
 class Backend extends TypedEmitter<BackendEvents> {
     private readonly _defaultKeeWebUrl = 'https://app.keeweb.info/';
     private readonly _requestTimeoutMillis = 60000;
+    private readonly _passkeysRequestTimeoutMillis = 300000;
     private readonly _consoleLogStyle =
         'background: {}; color: #000; padding: 2px 4px 0; border-radius: 2px;';
     private readonly _consoleLogStyleIn = this._consoleLogStyle.replace('{}', '#825fe3');
@@ -183,11 +187,14 @@ class Backend extends TypedEmitter<BackendEvents> {
 
     private request(request: KeeWebConnectRequest): Promise<KeeWebConnectResponse> {
         return new Promise((resolve, reject) => {
+            const requestTimeoutMillis = request.action.startsWith('passkeys-')
+                ? this._passkeysRequestTimeoutMillis
+                : this._requestTimeoutMillis;
             const timeout = self.setTimeout(() => {
                 this._currentRequest = undefined;
                 const errStr = chrome.i18n.getMessage('errorRequestTimeout');
                 reject(new Error(errStr));
-            }, this._requestTimeoutMillis);
+            }, requestTimeoutMillis);
 
             this._requestQueue.push({ request, resolve, reject, timeout });
             this.processRequestQueue();
@@ -285,6 +292,26 @@ class Backend extends TypedEmitter<BackendEvents> {
             throw new Error('Not connected');
         }
         return this._protocol.getAnyField(url, title);
+    }
+
+    async passkeysGet(
+        publicKey: KeeWebConnectPasskeysGetPublicKey,
+        origin: string
+    ): Promise<KeeWebConnectPasskeysGetResponseData> {
+        if (!this._protocol) {
+            throw new Error('Not connected');
+        }
+        return this._protocol.passkeysGet(publicKey, origin);
+    }
+
+    async passkeysRegister(
+        publicKey: KeeWebConnectPasskeysRegisterPublicKey,
+        origin: string
+    ): Promise<KeeWebConnectPasskeysGetResponseData> {
+        if (!this._protocol) {
+            throw new Error('Not connected');
+        }
+        return this._protocol.passkeysRegister(publicKey, origin);
     }
 }
 
