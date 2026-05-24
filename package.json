@@ -58,6 +58,7 @@
   },
   "dependencies": {
     "preact": "^10.5.13",
+    "psl": "^1.9.0",
     "tweetnacl": "^1.0.3"
   }
 }

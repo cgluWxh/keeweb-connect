@@ -1,10 +1,11 @@
 interface PasskeysPageRequest {
     action: 'passkeys-get' | 'passkeys-register';
     publicKey: unknown;
+    requestId: string;
 }
 
 interface PasskeysBackgroundResponse {
-    response?: unknown;
+    response?: Record<string, unknown>;
 }
 
 const RequestEvent = 'kw-passkeys-request';
@@ -36,7 +37,11 @@ document.addEventListener(RequestEvent, (event) => {
     if (!passkeysEnabled) {
         document.dispatchEvent(
             new CustomEvent(ResponseEvent, {
-                detail: { errorCode: '31', errorMessage: 'Passkeys are disabled' }
+                detail: {
+                    errorCode: '31',
+                    errorMessage: 'Passkeys are disabled',
+                    requestId: detail.requestId
+                }
             })
         );
         return;
@@ -46,15 +51,19 @@ document.addEventListener(RequestEvent, (event) => {
         {
             action: detail.action,
             publicKey: detail.publicKey,
-            origin: location.origin
+            origin: location.origin,
+            requestId: detail.requestId
         },
         (response: PasskeysBackgroundResponse) => {
             const lastError = chrome.runtime.lastError;
             document.dispatchEvent(
                 new CustomEvent(ResponseEvent, {
-                    detail: response?.response || {
-                        errorCode: '31',
-                        errorMessage: lastError?.message
+                    detail: {
+                        ...(response?.response || {
+                            errorCode: '31',
+                            errorMessage: lastError?.message
+                        }),
+                        requestId: detail.requestId
                     }
                 })
             );

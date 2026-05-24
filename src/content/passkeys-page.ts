@@ -10,6 +10,7 @@ const ResponseEvent = 'kw-passkeys-response';
 interface PasskeysRequest {
     action: 'passkeys-get' | 'passkeys-register';
     publicKey: unknown;
+    requestId: string;
     timeout: number;
     abortable: boolean;
 }
@@ -27,6 +28,7 @@ interface PasskeysAssertionResponse {
 }
 
 interface PasskeysCredentialResponse {
+    requestId?: string;
     id?: string;
     rawId?: string;
     type?: 'public-key';
@@ -65,6 +67,7 @@ function installPasskeysProxy() {
                 {
                     action: 'passkeys-register',
                     publicKey,
+                    requestId: createRequestId(),
                     timeout: getRequestTimeout(publicKey.timeout, true),
                     abortable: false
                 },
@@ -103,6 +106,7 @@ function installPasskeysProxy() {
                 {
                     action: 'passkeys-get',
                     publicKey,
+                    requestId: createRequestId(),
                     timeout: getRequestTimeout(publicKey.timeout, false),
                     abortable: true
                 },
@@ -167,7 +171,10 @@ function postPasskeysRequest(
             finish({ errorCode: '22', errorMessage: 'Abort signalled' });
         };
         const listener = (event: Event) => {
-            finish((event as CustomEvent<PasskeysCredentialResponse>).detail);
+            const response = (event as CustomEvent<PasskeysCredentialResponse>).detail;
+            if (response?.requestId === request.requestId) {
+                finish(response);
+            }
         };
         timeoutId = window.setTimeout(
             () => finish({ errorCode: '30', errorMessage: 'lifetimeTimer has expired' }),
@@ -358,6 +365,12 @@ function base64UrlToArrayBuffer(str: string) {
     const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
     const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
     return Uint8Array.from(atob(padded), (ch) => ch.charCodeAt(0)).buffer;
+}
+
+function createRequestId() {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return bufferSourceToBase64Url(bytes);
 }
 
 export {};

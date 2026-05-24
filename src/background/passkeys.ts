@@ -1,6 +1,7 @@
 import { backend } from './backend';
 import { activateTab } from './utils';
 import { BackendConnectionState } from 'common/backend-connection-state';
+import { parse as parsePublicSuffix } from 'psl';
 import {
     KeeWebConnectPasskeysGetPublicKey,
     KeeWebConnectPasskeysGetResponseData,
@@ -11,6 +12,7 @@ interface PasskeysRequest {
     action: 'passkeys-get' | 'passkeys-register';
     publicKey: KeeWebConnectPasskeysGetPublicKey | KeeWebConnectPasskeysRegisterPublicKey;
     origin: string;
+    requestId?: string;
 }
 
 function startPasskeysListener(): void {
@@ -73,27 +75,102 @@ function isPasskeysEnabled(): Promise<boolean> {
 }
 
 async function getRelatedOrigins(rpId?: string): Promise<string[]> {
-    if (!rpId || !/^[a-z0-9.-]+$/i.test(rpId)) {
+    const canonicalRpId = canonicalizeDomain(rpId);
+    if (!canonicalRpId || isPublicSuffix(canonicalRpId)) {
         return [];
     }
     try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(`https://${rpId}/.well-known/webauthn`, {
+        const response = await fetch(`https://${canonicalRpId}/.well-known/webauthn`, {
+            credentials: 'omit',
+            referrerPolicy: 'no-referrer',
             signal: controller.signal
         });
         clearTimeout(timeout);
+        if (!response.ok) {
+            return [];
+        }
         if (!response.headers.get('content-type')?.includes('application/json')) {
             return [];
         }
         const json = (await response.json()) as { origins?: unknown };
-        if (!Array.isArray(json.origins) || json.origins.length > 60) {
+        if (!Array.isArray(json.origins) || !json.origins.length || json.origins.length > 60) {
             return [];
         }
-        return json.origins.filter((origin): origin is string => typeof origin === 'string');
+        const origins = json.origins
+            .filter((origin): origin is string => typeof origin === 'string')
+            .map(canonicalizeOrigin)
+            .filter((origin): origin is string => Boolean(origin));
+        return [...new Set(origins)];
     } catch {
         return [];
     }
+}
+
+function canonicalizeOrigin(origin: string): string | undefined {
+    let url;
+    try {
+        url = new URL(origin);
+    } catch {
+        return undefined;
+    }
+    if (
+        url.protocol !== 'https:' ||
+        url.username ||
+        url.password ||
+        url.pathname !== '/' ||
+        url.search ||
+        url.hash ||
+        !canonicalizeDomain(url.hostname)
+    ) {
+        return undefined;
+    }
+    return url.origin;
+}
+
+function canonicalizeDomain(host?: string): string | undefined {
+    if (!host) {
+        return undefined;
+    }
+    let url;
+    try {
+        url = new URL(`https://${host}`);
+    } catch {
+        return undefined;
+    }
+    if (
+        url.username ||
+        url.password ||
+        url.pathname !== '/' ||
+        url.search ||
+        url.hash ||
+        url.port
+    ) {
+        return undefined;
+    }
+    const hostname = url.hostname.toLowerCase();
+    if (
+        !/^[a-z0-9.-]+$/i.test(hostname) ||
+        !hostname.includes('.') ||
+        hostname.endsWith('.') ||
+        isIpAddress(hostname) ||
+        !hostname
+            .split('.')
+            .every((label) => label && !label.startsWith('-') && !label.endsWith('-'))
+    ) {
+        return undefined;
+    }
+    return hostname;
+}
+
+function isPublicSuffix(hostname: string): boolean {
+    const parsed = parsePublicSuffix(hostname);
+    return Boolean(parsed.error || !parsed.domain);
+}
+
+function isIpAddress(hostname: string): boolean {
+    return /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.includes(':');
 }
 
 export { startPasskeysListener };
