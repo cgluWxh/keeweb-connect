@@ -1,5 +1,9 @@
 import { runCommand } from './commands';
 import { supportsUnicodeMenus } from 'common/features';
+import {
+    ExtensionButtonAction,
+    normalizeExtensionButtonAction
+} from 'common/extension-button-action';
 
 export function createUIMenus(): void {
     chrome.contextMenus.onClicked.addListener(async (e, tab) => {
@@ -97,6 +101,14 @@ export function createUIMenus(): void {
 
 export function bindExtensionButtonClick(): void {
     chrome.action.onClicked.addListener(async (tab) => {
-        await runCommand({ command: 'submit-auto', tab });
+        await runCommand({ command: await getExtensionButtonAction(), tab });
+    });
+}
+
+async function getExtensionButtonAction(): Promise<ExtensionButtonAction> {
+    return new Promise((resolve) => {
+        chrome.storage.local.get(['extensionButtonAction'], (result) => {
+            resolve(normalizeExtensionButtonAction(result.extensionButtonAction));
+        });
     });
 }

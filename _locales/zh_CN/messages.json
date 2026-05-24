@@ -146,6 +146,18 @@
   "optionsUsageMenu": {
     "message": "当然您也可以从 KeeWeb 右键菜单中选择一个您想要的操作："
   },
+  "optionsExtensionButtonAction": {
+    "message": "扩展按钮"
+  },
+  "optionsExtensionButtonActionDescription": {
+    "message": "选择点击扩展按钮时执行的默认操作。"
+  },
+  "optionsExtensionButtonActionFillAuto": {
+    "message": "只填充表单，不自动提交"
+  },
+  "optionsExtensionButtonActionSubmitAuto": {
+    "message": "自动填充并提交表单"
+  },
   "optionsShortcuts": {
     "message": "键盘快捷键"
   },

@@ -6,6 +6,11 @@ import {
     BackgroundMessageFromPageOpenTab
 } from 'common/background-interface';
 import { noop } from 'common/utils';
+import {
+    ExtensionButtonAction,
+    defaultExtensionButtonAction,
+    normalizeExtensionButtonAction
+} from 'common/extension-button-action';
 
 interface SettingsModelEvents {
     change: () => void;
@@ -19,6 +24,7 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
     private _keeWebUrl: string | undefined;
     private _passkeysEnabled = false;
     private _passkeysFallback = true;
+    private _extensionButtonAction: ExtensionButtonAction = defaultExtensionButtonAction;
     private _useNativeApp: boolean | undefined;
     private _backgroundPagePort: chrome.runtime.Port | undefined;
     private _chromeCommands: chrome.commands.Command[] | undefined;
@@ -36,12 +42,21 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
     private loadStorageConfig(): Promise<void> {
         return new Promise((resolve) => {
             chrome.storage.local.get(
-                ['useNativeApp', 'keeWebUrl', 'passkeysEnabled', 'passkeysFallback'],
+                [
+                    'useNativeApp',
+                    'keeWebUrl',
+                    'passkeysEnabled',
+                    'passkeysFallback',
+                    'extensionButtonAction'
+                ],
                 (result) => {
                     this._useNativeApp = <boolean>(result.useNativeApp ?? true);
                     this._keeWebUrl = <string>result.keeWebUrl;
                     this._passkeysEnabled = Boolean(result.passkeysEnabled);
                     this._passkeysFallback = <boolean>(result.passkeysFallback ?? true);
+                    this._extensionButtonAction = normalizeExtensionButtonAction(
+                        result.extensionButtonAction
+                    );
                     resolve();
                 }
             );
@@ -141,6 +156,15 @@ class SettingsModel extends TypedEmitter<SettingsModelEvents> {
     setPasskeysFallback(passkeysFallback: boolean) {
         this._passkeysFallback = passkeysFallback;
         chrome.storage.local.set({ passkeysFallback }, () => this.emit('change'));
+    }
+
+    get extensionButtonAction(): ExtensionButtonAction {
+        return this._extensionButtonAction;
+    }
+
+    setExtensionButtonAction(extensionButtonAction: ExtensionButtonAction) {
+        this._extensionButtonAction = extensionButtonAction;
+        chrome.storage.local.set({ extensionButtonAction }, () => this.emit('change'));
     }
 
     get keeWebUrl(): string {

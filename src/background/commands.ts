@@ -127,6 +127,7 @@ async function getActiveFrame(tab: chrome.tabs.Tab): Promise<number> {
 }
 
 async function getNextAutoFillCommand(args: CommandArgs): Promise<CommandArgs | undefined> {
+    const submit = args.command.includes('submit');
     const frameCount = await injectPageContentScript(args.tab);
     let allFrames: Frame[];
     if (frameCount > 1) {
@@ -145,11 +146,14 @@ async function getNextAutoFillCommand(args: CommandArgs): Promise<CommandArgs | 
             url: frame.url
         });
         if (resp?.nextCommand) {
-            args.command = resp.nextCommand;
+            const nextCommand = submit
+                ? resp.nextCommand
+                : resp.nextCommand.replace('submit-', 'insert-');
+            args.command = nextCommand;
             args.frameId = frame.id;
             args.url = frame.url;
             return {
-                command: resp.nextCommand,
+                command: nextCommand,
                 tab: args.tab,
                 frameId: frame.id,
                 url: frame.url
