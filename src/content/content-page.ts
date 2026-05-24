@@ -45,6 +45,14 @@ if (!window.kwExtensionInstalled) {
             let nextCommand;
             if (input.type === 'password') {
                 nextCommand = 'submit-password';
+            } else if (input.type === 'text' && (
+                input.inputMode === 'numeric' ||
+                input.name.toLowerCase().includes('otp') ||
+                input.name.toLowerCase().includes('code') ||
+                input.name.toLowerCase().includes('2fa') ||
+                input.name.toLowerCase().includes('mfa')
+            )) { 
+                nextCommand = 'insert-otp';
             } else {
                 const passInput = getNextFormPasswordInput(input);
                 if (passInput) {
