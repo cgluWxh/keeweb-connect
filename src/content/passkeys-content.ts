@@ -11,14 +11,17 @@ interface PasskeysBackgroundResponse {
 const RequestEvent = 'kw-passkeys-request';
 const ResponseEvent = 'kw-passkeys-response';
 const CancelEvent = 'kw-passkeys-cancel';
+const DefaultKeeWebUrl = 'https://app.keeweb.info/';
 
 let passkeysEnabled = false;
 let passkeysFallback = true;
+let keeWebUrl = DefaultKeeWebUrl;
 
-chrome.storage.local.get(['passkeysEnabled', 'passkeysFallback'], (result) => {
+chrome.storage.local.get(['passkeysEnabled', 'passkeysFallback', 'keeWebUrl'], (result) => {
     passkeysEnabled = Boolean(result.passkeysEnabled);
     passkeysFallback = <boolean>(result.passkeysFallback ?? true);
-    if (passkeysEnabled) {
+    keeWebUrl = <string>(result.keeWebUrl || DefaultKeeWebUrl);
+    if (canInjectPasskeys()) {
         injectPageScript();
     }
 });
@@ -26,12 +29,15 @@ chrome.storage.local.get(['passkeysEnabled', 'passkeysFallback'], (result) => {
 chrome.storage.onChanged.addListener((changes) => {
     if (changes.passkeysEnabled) {
         passkeysEnabled = Boolean(changes.passkeysEnabled.newValue);
-        if (passkeysEnabled) {
+        if (canInjectPasskeys()) {
             injectPageScript();
         }
     }
     if (changes.passkeysFallback) {
         passkeysFallback = <boolean>(changes.passkeysFallback.newValue ?? true);
+    }
+    if (changes.keeWebUrl) {
+        keeWebUrl = <string>(changes.keeWebUrl.newValue || DefaultKeeWebUrl);
     }
 });
 
@@ -91,11 +97,26 @@ document.addEventListener(CancelEvent, (event) => {
 });
 
 function injectPageScript() {
+    if (isKeeWebOrigin()) {
+        return;
+    }
     const script = document.createElement('script');
     script.src = chrome.runtime.getURL('js/passkeys-page.js');
     script.async = false;
     (document.documentElement || document.head).appendChild(script);
     script.remove();
+}
+
+function canInjectPasskeys() {
+    return passkeysEnabled && !isKeeWebOrigin();
+}
+
+function isKeeWebOrigin() {
+    try {
+        return new URL(keeWebUrl).origin === location.origin;
+    } catch (e) {
+        return new URL(DefaultKeeWebUrl).origin === location.origin;
+    }
 }
 
 export {};
