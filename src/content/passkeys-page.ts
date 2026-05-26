@@ -329,9 +329,6 @@ function checkPasskeysRequest(signal?: AbortSignal) {
             'NotAllowedError'
         );
     }
-    if (!(navigator as { userActivation?: { isActive?: boolean } }).userActivation?.isActive) {
-        throw new DOMException('User activation is required.', 'NotAllowedError');
-    }
 }
 
 function isSameOriginWithAncestors() {
