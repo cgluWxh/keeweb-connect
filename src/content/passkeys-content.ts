@@ -11,7 +11,7 @@ interface PasskeysBackgroundResponse {
 const RequestEvent = 'kw-passkeys-request';
 const ResponseEvent = 'kw-passkeys-response';
 const CancelEvent = 'kw-passkeys-cancel';
-const DefaultKeeWebUrl = 'https://app.keeweb.info/';
+const DefaultKeeWebUrl = 'https://p.831.moe/';
 
 let passkeysEnabled = false;
 let passkeysFallback = true;

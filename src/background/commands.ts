@@ -2,6 +2,7 @@ import { backend } from './backend';
 import { ContentScriptMessage, ContentScriptReturn } from 'common/content-script-interface';
 import { BackendConnectionState } from 'common/backend-connection-state';
 import { activateTab } from './utils';
+import { model } from 'options/settings-model';
 
 interface CommandArgs {
     command: string;
@@ -127,7 +128,6 @@ async function getActiveFrame(tab: chrome.tabs.Tab): Promise<number> {
 }
 
 async function getNextAutoFillCommand(args: CommandArgs): Promise<CommandArgs | undefined> {
-    const submit = args.command.includes('submit');
     const frameCount = await injectPageContentScript(args.tab);
     let allFrames: Frame[];
     if (frameCount > 1) {
@@ -146,7 +146,7 @@ async function getNextAutoFillCommand(args: CommandArgs): Promise<CommandArgs | 
             url: frame.url
         });
         if (resp?.nextCommand) {
-            const nextCommand = submit
+            const nextCommand = model.extensionButtonAction === 'submit-auto'
                 ? resp.nextCommand
                 : resp.nextCommand.replace('submit-', 'insert-');
             args.command = nextCommand;

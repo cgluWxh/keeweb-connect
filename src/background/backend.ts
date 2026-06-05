@@ -27,7 +27,7 @@ interface BackendEvents {
 }
 
 class Backend extends TypedEmitter<BackendEvents> {
-    private readonly _defaultKeeWebUrl = 'https://app.keeweb.info/';
+    private readonly _defaultKeeWebUrl = 'https://p.831.moe/';
     private readonly _requestTimeoutMillis = 60000;
     private readonly _passkeysRequestTimeoutMillis = 300000;
     private readonly _consoleLogStyle =
