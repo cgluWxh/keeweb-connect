@@ -9,11 +9,13 @@ interface CommandArgs {
     tab: chrome.tabs.Tab;
     url?: string;
     frameId?: number;
+    targetId?: string;
 }
 
 interface Frame {
     id: number;
     url: string;
+    targetId?: string;
 }
 
 function startCommandListener(): void {
@@ -23,8 +25,14 @@ function startCommandListener(): void {
                 chrome.tabs.query({ active: true }, resolve)
             );
         }
-        const frameId = await getActiveFrame(tab);
-        await runCommand({ command, tab, frameId, url: tab.url });
+        const activeFrame = await getActiveFrame(tab);
+        await runCommand({
+            command,
+            tab,
+            frameId: activeFrame.id,
+            url: activeFrame.url,
+            targetId: activeFrame.targetId
+        });
     });
 }
 
@@ -90,6 +98,8 @@ async function runCommand(args: CommandArgs): Promise<void> {
         await autoFill(args.url, args.tab, args.frameId, {
             text,
             password,
+            otp: options.otp,
+            targetId: args.targetId,
             submit: options.submit
         });
     } finally {
@@ -103,25 +113,50 @@ function isValidUrl(url: string): boolean {
     return /^https?:/i.test(url) && !url.startsWith(backend.keeWebUrl);
 }
 
-async function getActiveFrame(tab: chrome.tabs.Tab): Promise<number> {
+async function getActiveFrame(tab: chrome.tabs.Tab): Promise<Frame> {
     return new Promise((resolve) => {
         chrome.scripting.executeScript(
             {
                 target: {
-                    frameIds: [0],
+                    allFrames: true,
                     tabId: tab.id || 0
                 },
                 func: () => {
-                    Array.from(document.querySelectorAll('iframe')).indexOf(
-                        document.activeElement as HTMLIFrameElement
-                    );
+                    const activeElement = document.activeElement;
+                    let targetId: string | undefined;
+                    if (activeElement instanceof HTMLInputElement) {
+                        targetId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                        activeElement.setAttribute('data-kw-autofill-target-id', targetId);
+                    }
+                    const isEditable =
+                        activeElement instanceof HTMLInputElement ||
+                        activeElement instanceof HTMLTextAreaElement ||
+                        activeElement instanceof HTMLSelectElement ||
+                        (activeElement instanceof HTMLElement && activeElement.isContentEditable);
+
+                    return {
+                        isActive: document.hasFocus() && isEditable,
+                        url: location.href,
+                        targetId
+                    };
                 }
             },
-            (result: chrome.scripting.InjectionResult<void>[]) => {
+            (
+                results: chrome.scripting.InjectionResult<{
+                    isActive: boolean;
+                    url: string;
+                    targetId?: string;
+                }>[]
+            ) => {
                 if (chrome.runtime.lastError) {
-                    return resolve(0);
+                    return resolve({ id: 0, url: tab.url || '' });
                 }
-                resolve(Number(result[0]) + 1); // indexOf returns -1, then it's root document which is frameId:0
+                const activeFrame = results.find((result) => result.result?.isActive);
+                resolve({
+                    id: activeFrame?.frameId ?? 0,
+                    url: activeFrame?.result?.url || tab.url || '',
+                    targetId: activeFrame?.result?.targetId
+                });
             }
         );
     });
@@ -146,17 +181,21 @@ async function getNextAutoFillCommand(args: CommandArgs): Promise<CommandArgs | 
             url: frame.url
         });
         if (resp?.nextCommand) {
-            const nextCommand = model.extensionButtonAction === 'submit-auto'
-                ? resp.nextCommand
-                : resp.nextCommand.replace('submit-', 'insert-');
+            const targetId = args.frameId === frame.id ? args.targetId : undefined;
+            const nextCommand =
+                model.extensionButtonAction === 'submit-auto'
+                    ? resp.nextCommand
+                    : resp.nextCommand.replace('submit-', 'insert-');
             args.command = nextCommand;
             args.frameId = frame.id;
             args.url = frame.url;
+            args.targetId = targetId;
             return {
                 command: nextCommand,
                 tab: args.tab,
                 frameId: frame.id,
-                url: frame.url
+                url: frame.url,
+                targetId
             };
         }
     }
@@ -179,7 +218,7 @@ async function autoFill(
     url: string,
     tab: chrome.tabs.Tab,
     frameId: number,
-    options: { text?: string; password?: string; submit: boolean }
+    options: { text?: string; password?: string; otp: boolean; targetId?: string; submit: boolean }
 ): Promise<ContentScriptReturn | undefined> {
     return await sendMessageToTab(tab, frameId, {
         action: 'auto-fill',

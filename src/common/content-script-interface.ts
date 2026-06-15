@@ -3,6 +3,8 @@ export interface ContentScriptMessageAutoFill {
     url: string;
     text?: string;
     password?: string;
+    otp?: boolean;
+    targetId?: string;
     submit: boolean;
 }
 
